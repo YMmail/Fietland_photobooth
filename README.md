@@ -8,9 +8,21 @@ Photobooth แบบเกาหลี (9:16): ถ่าย 3 ช็อต (ห�
 - `script.js` — ลอจิกทั้งหมด (กล้อง, Fabric.js canvas, เซฟ, อัปโหลด)
 
 ## เพิ่มกรอบ / สติกเกอร์
-แก้ส่วน CONFIG บนสุดของ `script.js`:
+แก้ส่วน CONFIG บนสุดของ `script.js`
+
+**กรอบ** เป็น PNG ขนาด 1080x1920 ที่เจาะช่องรูปให้โปร่งใส แล้วบอกพิกัดช่อง (พิกเซลบนไฟล์กรอบ) ใน `slots`
+เรียงตามลำดับช็อต จำนวนช่องต้องเท่ากับจำนวนช็อต (กรอบ 4 ช่องจะใช้ได้เฉพาะตอนถ่าย 4 ช็อต)
 ```js
-const FRAMES = ['frames/frame1.png'];
+const FRAMES = [
+  { src: 'frames/unlock-multiskills.png',
+    slots: [ { x: 92, y: 127, w: 397, h: 643 }, /* ... */ ] },
+  { src: 'frames/overlay.png' },   // ไม่มี slots = ทับเฉย ๆ ใช้ได้ทุกจำนวนช็อต
+];
+```
+รูปถ่ายจะถูกขยายให้เต็มช่องแล้วครอปตรงกลางอัตโนมัติ
+
+**สติกเกอร์**
+```js
 const STICKER_CATEGORIES = [
   { id: 'cat-1', label: '✨ deco', items: ['stickers/deco/heart.png'] },
 ];

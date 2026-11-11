@@ -373,3 +373,9 @@ button:disabled {
     background: #dbc7eb;
     color: white;
 }
+
+/* กรอบที่ใช้กับจำนวนช็อตปัจจุบันไม่ได้ */
+.thumb-btn.thumb-unavailable {
+    opacity: 0.35;
+    cursor: not-allowed;
+}

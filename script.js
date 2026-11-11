@@ -1,7 +1,20 @@
-// ================= CONFIG: รายการรูป (ตอนนี้ว่างไว้ก่อน) =================
-// เพิ่ม path ของไฟล์กรอบ (ควรเป็น PNG พื้นใส ขนาด 1080x1920) ตรงนี้ เช่น
-// const FRAMES = ['frames/frame1.png', 'frames/frame2.png'];
-const FRAMES = [];
+// ================= CONFIG: กรอบรูป =================
+// แต่ละกรอบเป็น PNG ขนาด 1080x1920 ที่เจาะช่องรูปให้โปร่งใส
+//   src   : path ของไฟล์
+//   slots : ช่องรูป (พิกัดพิกเซลบนไฟล์กรอบ 1080x1920) เรียงตามลำดับช็อต
+//           จำนวนช่อง = จำนวนช็อตที่กรอบนี้ใช้ได้
+//           ไม่ใส่ slots = กรอบแบบทับเฉย ๆ ใช้กับทุกจำนวนช็อต
+const FRAMES = [
+    {
+        src: 'frames/unlock-multiskills.png',
+        slots: [
+            { x: 92, y: 127, w: 397, h: 643 },
+            { x: 591, y: 127, w: 397, h: 643 },
+            { x: 92, y: 832, w: 397, h: 642 },
+            { x: 591, y: 832, w: 397, h: 642 },
+        ],
+    },
+];
 
 // หมวดสติกเกอร์: ใส่ path ไฟล์ใน items เช่น items: ['stickers/deco/heart.png']
 const STICKER_CATEGORIES = [
@@ -39,8 +52,10 @@ const flashEffect = document.getElementById('flash-effect');
 
 let canvas;
 let stream;
-let capturedPhotos = [];
+let capturedPhotos = [];      // ภาพเต็มจากกล้อง (กลับด้านแล้ว) ยังไม่ครอป
+let photoObjs = [];           // รูปถ่ายบน canvas
 let currentFrameObj = null;
+let currentFrame = null;      // config ของกรอบที่เลือกอยู่
 
 // ================= สร้างปุ่มกรอบ / สติกเกอร์จาก CONFIG =================
 function makeThumb(src, onClick) {
@@ -49,8 +64,13 @@ function makeThumb(src, onClick) {
     img.className = 'thumb-btn';
     img.alt = src.split('/').pop();
     img.loading = 'lazy';
-    img.addEventListener('click', () => onClick(src));
+    img.addEventListener('click', () => onClick(img));
     return img;
+}
+
+// กรอบที่มีช่องรูปใช้ได้เฉพาะจำนวนช็อตที่ตรงกัน
+function frameFits(frame) {
+    return !frame.slots || frame.slots.length === totalPhotos;
 }
 
 function makeEmptyNote(text) {
@@ -67,7 +87,22 @@ function renderFrameList() {
         list.appendChild(makeEmptyNote('No frames yet'));
         return;
     }
-    FRAMES.forEach(src => list.appendChild(makeThumb(src, addFrame)));
+    FRAMES.forEach(frame => {
+        const thumb = makeThumb(frame.src, () => addFrame(frame));
+        thumb.dataset.slots = frame.slots ? frame.slots.length : '';
+        list.appendChild(thumb);
+    });
+    updateFrameAvailability();
+}
+
+// ทำปุ่มกรอบที่ใช้กับจำนวนช็อตปัจจุบันไม่ได้ให้จางลง
+function updateFrameAvailability() {
+    document.querySelectorAll('#frame-list .thumb-btn').forEach(thumb => {
+        const n = thumb.dataset.slots;
+        const fits = !n || Number(n) === totalPhotos;
+        thumb.classList.toggle('thumb-unavailable', !fits);
+        thumb.title = fits ? '' : `กรอบนี้ใช้กับ ${n} ช็อต`;
+    });
 }
 
 function renderStickerCategories() {
@@ -93,7 +128,7 @@ function renderStickerCategories() {
         if (cat.items.length === 0) {
             grid.appendChild(makeEmptyNote('No stickers yet'));
         } else {
-            cat.items.forEach(src => grid.appendChild(makeThumb(src, addSticker)));
+            cat.items.forEach(src => grid.appendChild(makeThumb(src, () => addSticker(src))));
         }
         panel.appendChild(grid);
         panels.appendChild(panel);
@@ -121,7 +156,14 @@ function updateLayout() {
     }
 
     // แถบดำบนกล้อง: ถ้าช่องกว้างกว่ากล้อง ตัดบน-ล่าง / ถ้าช่องแคบกว่า ตัดซ้าย-ขวา
-    const targetRatio = photoWidth / photoHeight;
+    // ใช้ช่องที่ผอมที่สุด (เลย์เอาต์ปกติ หรือช่องของกรอบที่ใช้กับจำนวนช็อตนี้ได้)
+    // จะได้เห็นในกล้องเท่าที่จะติดอยู่ในรูปจริงไม่ว่าจะเลือกกรอบไหน
+    let targetRatio = photoWidth / photoHeight;
+    FRAMES.forEach(f => {
+        if (f.slots && f.slots.length === totalPhotos) {
+            f.slots.forEach(s => { targetRatio = Math.min(targetRatio, s.w / s.h); });
+        }
+    });
     const camRatio = 640 / 480;
     let guideTB = 0, guideLR = 0;
     if (targetRatio > camRatio) {
@@ -143,6 +185,7 @@ document.querySelectorAll('.shot-btn').forEach(btn => {
         document.querySelectorAll('.shot-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         updateLayout();
+        updateFrameAvailability();
     });
 });
 
@@ -197,27 +240,16 @@ function captureSinglePhoto() {
     flashEffect.classList.add('flash-animate');
     setTimeout(() => flashEffect.classList.remove('flash-animate'), 500);
 
+    // เก็บภาพเต็มจากกล้อง แล้วค่อยครอปตอนวางลงช่อง (ช่องของแต่ละกรอบสัดส่วนไม่เท่ากัน)
     const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = photoWidth;
-    tempCanvas.height = photoHeight;
+    tempCanvas.width = video.videoWidth;
+    tempCanvas.height = video.videoHeight;
     const tempCtx = tempCanvas.getContext('2d');
     // กลับด้านเหมือนกระจก
     tempCtx.translate(tempCanvas.width, 0);
     tempCtx.scale(-1, 1);
-
-    // ครอปตรงกลางให้ได้สัดส่วนเท่าช่องรูป
-    const targetRatio = photoWidth / photoHeight;
-    const videoRatio = video.videoWidth / video.videoHeight;
-    let sWidth, sHeight, sx, sy;
-    if (targetRatio > videoRatio) {
-        sWidth = video.videoWidth; sHeight = sWidth / targetRatio;
-        sx = 0; sy = (video.videoHeight - sHeight) / 2;
-    } else {
-        sHeight = video.videoHeight; sWidth = sHeight * targetRatio;
-        sy = 0; sx = (video.videoWidth - sWidth) / 2;
-    }
-    tempCtx.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, photoWidth, photoHeight);
-    capturedPhotos.push(tempCanvas.toDataURL('image/png'));
+    tempCtx.drawImage(video, 0, 0);
+    capturedPhotos.push(tempCanvas.toDataURL('image/jpeg', 0.95));
 }
 
 // ================= 3. หน้าตกแต่ง =================
@@ -237,37 +269,85 @@ function goToEditor() {
         currentFrameObj = null;
     }
 
-    let loadedImages = 0;
+    photoObjs = [];
+    currentFrame = null;
+    updateFrameAvailability();
+    placePhotos(defaultSlots());
+}
+
+// ช่องรูปตามเลย์เอาต์ปกติ (ไม่มีกรอบ) ในหน่วยของ canvas
+function defaultSlots() {
+    return photoPositions.map(p => ({ x: p.x, y: p.y, w: photoWidth, h: photoHeight }));
+}
+
+// ช่องรูปของกรอบ แปลงจากพิกเซลบนไฟล์กรอบเป็นหน่วยของ canvas
+function frameSlots(frame, img) {
+    const sx = canvasWidth / img.width, sy = canvasHeight / img.height;
+    return frame.slots.map(s => ({ x: s.x * sx, y: s.y * sy, w: s.w * sx, h: s.h * sy }));
+}
+
+// วางรูปถ่ายลงช่อง: ขยายให้เต็มช่อง (cover) แล้วตัดส่วนเกินด้วย clipPath
+function placePhotos(slots) {
+    photoObjs.forEach(o => canvas.remove(o));
+    photoObjs = new Array(capturedPhotos.length);
+    let loaded = 0;
     capturedPhotos.forEach((photoDataUrl, index) => {
         fabric.Image.fromURL(photoDataUrl, function (img) {
+            const slot = slots[index];
+            const scale = Math.max(slot.w / img.width, slot.h / img.height);
             img.set({
-                left: photoPositions[index].x, top: photoPositions[index].y,
+                scaleX: scale, scaleY: scale,
+                left: slot.x + (slot.w - img.width * scale) / 2,
+                top: slot.y + (slot.h - img.height * scale) / 2,
+                clipPath: new fabric.Rect({
+                    left: slot.x, top: slot.y, width: slot.w, height: slot.h,
+                    absolutePositioned: true
+                }),
                 selectable: false, evented: false
             });
-            canvas.add(img); img.sendToBack();
-            loadedImages++;
-            if (loadedImages === totalPhotos) canvas.renderAll();
+            photoObjs[index] = img;
+            loaded++;
+            if (loaded === capturedPhotos.length) {
+                // ใส่รูปไว้ชั้นล่างสุดตามลำดับ กรอบและสติกเกอร์จะอยู่ด้านบน
+                for (let i = photoObjs.length - 1; i >= 0; i--) {
+                    canvas.add(photoObjs[i]); photoObjs[i].sendToBack();
+                }
+                canvas.renderAll();
+            }
         });
     });
 }
 
 // กรอบรูป: อยู่เหนือรูปถ่าย ใต้สติกเกอร์
-function addFrame(url) {
-    fabric.Image.fromURL(url, function (img, isError) {
-        if (isError || !img || !img.width) { alert('หาไฟล์กรอบไม่เจอ: ' + url); return; }
+function addFrame(frame) {
+    if (!frameFits(frame)) {
+        alert(`กรอบนี้ใช้กับ ${frame.slots.length} ช็อต (ตอนนี้ถ่าย ${totalPhotos} ช็อต)`);
+        return;
+    }
+    fabric.Image.fromURL(frame.src, function (img, isError) {
+        if (isError || !img || !img.width) { alert('หาไฟล์กรอบไม่เจอ: ' + frame.src); return; }
         if (currentFrameObj) canvas.remove(currentFrameObj);
+        // ย้ายรูปถ่ายเข้าช่องของกรอบ (หรือกลับเลย์เอาต์ปกติถ้ากรอบไม่มีช่อง)
+        placePhotos(frame.slots ? frameSlots(frame, img) : defaultSlots());
+        currentFrame = frame;
         img.set({
             left: 0, top: 0,
             scaleX: canvas.width / img.width, scaleY: canvas.height / img.height,
             selectable: false, evented: false
         });
-        canvas.add(img); img.moveTo(totalPhotos);
+        // ไว้ล่างสุดก่อน แล้วรูปถ่ายจะถูกแทรกไว้ใต้กรอบอีกที (สติกเกอร์อยู่บนกรอบเสมอ)
+        canvas.add(img); img.moveTo(0);
         currentFrameObj = img; canvas.renderAll();
     }, { crossOrigin: 'anonymous' });
 }
 
 function removeFrame() {
-    if (currentFrameObj) { canvas.remove(currentFrameObj); currentFrameObj = null; canvas.renderAll(); }
+    if (currentFrameObj) {
+        canvas.remove(currentFrameObj); currentFrameObj = null;
+        if (currentFrame && currentFrame.slots) placePhotos(defaultSlots());
+        currentFrame = null;
+        canvas.renderAll();
+    }
 }
 
 // สติกเกอร์: อยู่บนสุด ลาก/ย่อ/หมุนได้
