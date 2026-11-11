@@ -13,78 +13,86 @@
 </head>
 
 <body>
-    <div class="app-container">
-        <!-- โซนถ่ายรูป -->
-        <div id="camera-section-wrapper">
-            <div id="camera-section">
-                <div class="crop-guide" id="guide-top"></div>
-                <video id="webcam" autoplay playsinline muted></video>
-                <div class="crop-guide" id="guide-bottom"></div>
-                <div class="crop-guide-side" id="guide-left"></div>
-                <div class="crop-guide-side" id="guide-right"></div>
-                <div id="flash-effect"></div>
-                <div id="countdown-display"></div>
-            </div>
-            <!-- เลือกจำนวนช็อตก่อนถ่าย -->
-            <div class="shot-select">
-                <button class="shot-btn active" data-shots="3">3 ช็อต</button>
-                <button class="shot-btn" data-shots="4">4 ช็อต</button>
-            </div>
-            <button class="btn-primary" id="snap-btn">📷 Take a Photo</button>
-        </div>
+    <main class="app">
+        <!-- แถบบอกขั้นตอน -->
+        <nav class="stepper" aria-label="Steps">
+            <span class="step" data-step="1">1 Frame</span>
+            <span class="step" data-step="2">2 Photo</span>
+            <span class="step" data-step="3">3 Decorate</span>
+            <span class="step" data-step="4">4 Save</span>
+        </nav>
 
-        <!-- โซนตกแต่ง -->
-        <div id="editor-layout">
-            <div class="sidebar">
-                <div class="tool-block">
-                    <h3>🖼️ Choose your frame</h3>
-                    <!-- สร้างจาก FRAMES ใน script.js -->
-                    <div class="frame-thumbnails" id="frame-list"></div>
-                    <button class="btn-remove" onclick="removeFrame()" style="margin-top: 10px;">❌ Delete frame</button>
-                </div>
-                <div class="tool-block tool-block-plain">
-                    <button class="btn-retake" id="retake-btn">🔄 Retake image</button>
-                </div>
-            </div>
+        <!-- ขั้นที่ 1: เลือกกรอบ -->
+        <section id="view-frame" class="view">
+            <header class="view-head">
+                <h1>Choose your frame</h1>
+                <p class="sub">Pick how many photos you want, then pick a frame.</p>
+            </header>
+            <!-- สร้างจาก FRAMES ใน script.js -->
+            <div id="frame-groups"></div>
+        </section>
 
-            <div class="middle-column">
-                <div id="canvas-wrapper">
-                    <canvas id="fabric-canvas"></canvas>
+        <!-- ขั้นที่ 2: ถ่ายรูป -->
+        <section id="view-photo" class="view" hidden>
+            <div class="photo-layout">
+                <div class="camera-col">
+                    <h2 id="photo-counter">Photo 1 of 3</h2>
+                    <div id="camera-box">
+                        <video id="webcam" autoplay playsinline muted></video>
+                        <span class="corner tl"></span>
+                        <span class="corner tr"></span>
+                        <span class="corner bl"></span>
+                        <span class="corner br"></span>
+                        <div id="countdown-display" hidden></div>
+                        <span id="camera-tag"></span>
+                        <div id="flash-effect"></div>
+                        <p id="camera-error" hidden></p>
+                    </div>
+                    <div class="camera-actions">
+                        <button class="btn btn-ghost" id="change-frame-btn">Change frame</button>
+                        <button class="btn btn-primary" id="snap-btn">📷 Take a Photo</button>
+                    </div>
                 </div>
-                <div class="qr-btn-row">
-                    <button class="btn-qr-get" id="qr-btn" onclick="uploadToDrive()">📱 Get QR Code</button>
-                </div>
+                <aside class="strip-col">
+                    <p class="label">Your strip</p>
+                    <div id="strip-preview"></div>
+                    <p class="hint">Each shot fills the next slot.</p>
+                </aside>
             </div>
+        </section>
 
-            <div class="sidebar">
-                <div class="tool-block">
-                    <h3>✨ Let's Decorate</h3>
-                    <!-- สร้างจาก STICKER_CATEGORIES ใน script.js -->
-                    <div class="category-tabs" id="category-tabs"></div>
-                    <div id="sticker-panels"></div>
-                    <button class="btn-remove" onclick="deleteSelected()" style="margin-top: 15px;">🗑️ Delete selected</button>
+        <!-- ขั้นที่ 3–4: ตกแต่ง + เซฟ -->
+        <section id="view-edit" class="view" hidden>
+            <div class="edit-layout">
+                <div class="edit-left">
+                    <button class="btn btn-retake" id="retake-btn">🔄 Retake</button>
+                    <div id="qr-card" class="panel" hidden>
+                        <h3>Scan to get your photo</h3>
+                        <div id="qr-display"></div>
+                        <p class="hint" id="qr-hint">Opens your Google Drive folder so you can download the photo to your phone.</p>
+                    </div>
                 </div>
-                <div class="tool-block tool-block-plain">
-                    <button class="btn-success" id="download-btn">💾 Save image</button>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- QR Modal -->
-    <div id="qr-modal">
-        <div class="qr-card">
-            <h2 id="modal-title">Ready!</h2>
-            <p id="modal-desc">Scan to see your photo</p>
-            <div id="qr-display">
-                <div class="loading-spinner"></div>
-                <span>Finalizing...</span>
+                <div class="edit-center">
+                    <div id="canvas-wrapper">
+                        <canvas id="fabric-canvas"></canvas>
+                    </div>
+                </div>
+
+                <div class="edit-right">
+                    <div class="panel">
+                        <h3>✨ Let's Decorate</h3>
+                        <!-- สร้างจาก STICKER_CATEGORIES ใน script.js -->
+                        <div class="category-tabs" id="category-tabs"></div>
+                        <div id="sticker-panels"></div>
+                        <p class="hint">Tap a sticker to add it, then drag it on your photo. Select one and press Delete to remove it.</p>
+                        <button class="btn btn-remove btn-small" id="delete-btn">🗑️ Delete selected</button>
+                    </div>
+                    <button class="btn btn-success" id="save-btn">💾 Save Image</button>
+                </div>
             </div>
-            <div id="qr-link-area" style="display: none;">
-                <button class="btn-remove" onclick="closeQRModal()">Close</button>
-            </div>
-        </div>
-    </div>
+        </section>
+    </main>
 
     <script src="script.js"></script>
 </body>

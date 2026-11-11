@@ -1,11 +1,46 @@
+// ================= ขนาดรูป =================
+const OUT_W = 1080, OUT_H = 1920;        // ขนาดไฟล์ที่เซฟ (9:16)
+const CANVAS_W = 540, CANVAS_H = 960;    // ขนาดทำงานบน canvas (ตอนเซฟขยาย x2)
+const K = CANVAS_W / OUT_W;
+
+// ช่องรูปแบบแถบแนวตั้งสำหรับกรอบสีพื้น (พิกัดเป็นพิกเซลบนรูป 1080x1920)
+function stripSlots(cuts, ratio) {
+    const top = 60, bottom = 240, gap = 28, side = 90;
+    let h = (OUT_H - top - bottom - gap * (cuts - 1)) / cuts;
+    let w = h * ratio;
+    if (w > OUT_W - side * 2) { w = OUT_W - side * 2; h = w / ratio; }
+    const totalH = h * cuts + gap * (cuts - 1);
+    const y0 = top + (OUT_H - top - bottom - totalH) / 2;
+    return Array.from({ length: cuts }, (_, i) => ({
+        x: Math.round((OUT_W - w) / 2), y: Math.round(y0 + i * (h + gap)),
+        w: Math.round(w), h: Math.round(h)
+    }));
+}
+
+function plainFrame(name, color, cuts) {
+    return { name, color, cuts, slots: stripSlots(cuts, cuts === 3 ? 4 / 3 : 3 / 2) };
+}
+
 // ================= CONFIG: กรอบรูป =================
-// แต่ละกรอบเป็น PNG ขนาด 1080x1920 ที่เจาะช่องรูปให้โปร่งใส
-//   src   : path ของไฟล์
-//   slots : ช่องรูป (พิกัดพิกเซลบนไฟล์กรอบ 1080x1920) เรียงตามลำดับช็อต
-//           จำนวนช่อง = จำนวนช็อตที่กรอบนี้ใช้ได้
-//           ไม่ใส่ slots = กรอบแบบทับเฉย ๆ ใช้กับทุกจำนวนช็อต
+// แต่ละกรอบมี:
+//   name  : ชื่อที่แสดง
+//   cuts  : จำนวนช็อต (3 หรือ 4)
+//   slots : ช่องรูป พิกัดพิกเซลบนรูป 1080x1920 เรียงตามลำดับช็อต
+//           สัดส่วนของช่อง = สัดส่วนกล้องตอนถ่าย
+//   color : สีพื้นหลังกรอบ (ถ้ามี)
+//   src   : ไฟล์ PNG 1080x1920 ที่เจาะช่องรูปให้โปร่งใส (ถ้ามี) วางทับบนรูปถ่าย
 const FRAMES = [
+    plainFrame('Classic White', '#ffffff', 3),
+    plainFrame('Lavender', '#dbc7eb', 3),
+    plainFrame('Pink', '#f6cfdc', 3),
+    plainFrame('Butter', '#f7eeca', 3),
+
+    plainFrame('Classic White', '#ffffff', 4),
+    plainFrame('Lavender', '#dbc7eb', 4),
+    plainFrame('Pink', '#f6cfdc', 4),
+    plainFrame('Butter', '#f7eeca', 4),
     {
+        name: 'Unlock Multiskills', cuts: 4, color: '#0d0b2e',
         src: 'frames/unlock-multiskills.png',
         slots: [
             { x: 92, y: 127, w: 397, h: 643 },
@@ -24,55 +59,334 @@ const STICKER_CATEGORIES = [
     { id: 'cat-4', label: '🍭 sweets', items: [] },
 ];
 
-// URL ของ Google Apps Script สำหรับอัปโหลด (เว้นว่าง = ปิดการอัปโหลด)
+// URL ของ Google Apps Script สำหรับอัปโหลด (เว้นว่าง = ไม่อัปโหลด ไม่มี QR)
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw4F0bouElg00hvU3tvvsKZcY6xfx60rx-h8JoLNPc9tynYHALTI8mkCgVFbUx20IYJ/exec';
 
-// ================= Layout Settings =================
-const canvasWidth = 540;
-const canvasHeight = 960;
-let totalPhotos = 3;          // 3 = เรียงแนวตั้ง 1 แถว, 4 = ตาราง 2x2
-const padLeftRight = 25;
-const padTop = 25;
-const padBottom = 180;        // พื้นที่ด้านล่างตอน 3 ช็อต
-const padBottom4 = 350;       // พื้นที่ด้านล่างตอน 4 ช็อต (เว้นไว้ใส่โลโก้/สติกเกอร์)
-const gap = 15;
-
-let cols, rows;
-let photoWidth;
-let photoHeight;
-let photoPositions = [];      // พิกัดมุมซ้ายบนของแต่ละช็อต
+const COUNTDOWN_SECONDS = 5;
 
 // ================= DOM =================
-const video = document.getElementById('webcam');
-const cameraSectionWrapper = document.getElementById('camera-section-wrapper');
-const editorLayout = document.getElementById('editor-layout');
-const snapBtn = document.getElementById('snap-btn');
-const countdownDisplay = document.getElementById('countdown-display');
-const flashEffect = document.getElementById('flash-effect');
+const $ = id => document.getElementById(id);
+const views = { frame: $('view-frame'), photo: $('view-photo'), edit: $('view-edit') };
+const video = $('webcam');
+const cameraBox = $('camera-box');
+const snapBtn = $('snap-btn');
+const changeFrameBtn = $('change-frame-btn');
+const countdownDisplay = $('countdown-display');
+const flashEffect = $('flash-effect');
+const saveBtn = $('save-btn');
+const qrCard = $('qr-card');
+const qrDisplay = $('qr-display');
 
-let canvas;
-let stream;
-let capturedPhotos = [];      // ภาพเต็มจากกล้อง (กลับด้านแล้ว) ยังไม่ครอป
-let photoObjs = [];           // รูปถ่ายบน canvas
-let currentFrameObj = null;
-let currentFrame = null;      // config ของกรอบที่เลือกอยู่
+// ================= State =================
+let frame = null;         // กรอบที่เลือก
+let shots = [];           // dataURL ของรูปที่ถ่ายแล้ว (ครอปตามช่องแล้ว)
+let shooting = false;
+let stream = null;
+let canvas = null;
+let saved = false;
 
-// ================= สร้างปุ่มกรอบ / สติกเกอร์จาก CONFIG =================
-function makeThumb(src, onClick) {
-    const img = document.createElement('img');
-    img.src = src;
-    img.className = 'thumb-btn';
-    img.alt = src.split('/').pop();
-    img.loading = 'lazy';
-    img.addEventListener('click', () => onClick(img));
-    return img;
+// ================= ตัวช่วย =================
+function ratioLabel(r) {
+    for (let q = 1; q <= 10; q++) {
+        const p = Math.round(r * q);
+        if (p > 0 && Math.abs(p / q - r) / r < 0.015) return `${p}:${q}`;
+    }
+    return r.toFixed(2);
 }
 
-// กรอบที่มีช่องรูปใช้ได้เฉพาะจำนวนช็อตที่ตรงกัน
-function frameFits(frame) {
-    return !frame.slots || frame.slots.length === totalPhotos;
+function loadFabricImage(url) {
+    return new Promise((resolve, reject) => {
+        fabric.Image.fromURL(url, (img, isError) => {
+            if (isError || !img || !img.width) reject(new Error('โหลดรูปไม่ได้: ' + url));
+            else resolve(img);
+        }, { crossOrigin: 'anonymous' });
+    });
 }
 
+function setStep(n) {
+    document.querySelectorAll('.step').forEach(el => {
+        const s = Number(el.dataset.step);
+        el.classList.toggle('active', s === n);
+        el.classList.toggle('done', s < n);
+    });
+}
+
+function showView(name) {
+    Object.entries(views).forEach(([k, el]) => { el.hidden = k !== name; });
+    window.scrollTo({ top: 0 });
+}
+
+// ================= ขั้นที่ 1: เลือกกรอบ =================
+function drawFrameThumb(f, cnv) {
+    const W = cnv.width = 180, H = cnv.height = 320, k = W / OUT_W;
+    const ctx = cnv.getContext('2d');
+    const paint = (overlay) => {
+        ctx.fillStyle = f.color || '#ffffff';
+        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = '#d9d0e2';
+        f.slots.forEach(s => ctx.fillRect(s.x * k, s.y * k, s.w * k, s.h * k));
+        if (overlay) ctx.drawImage(overlay, 0, 0, W, H);
+    };
+    paint(null);
+    if (f.src) {
+        const img = new Image();
+        img.onload = () => paint(img);
+        img.src = f.src;
+    }
+}
+
+function renderFrameGroups() {
+    const root = $('frame-groups');
+    root.innerHTML = '';
+    [3, 4].forEach(cuts => {
+        const frames = FRAMES.filter(f => f.cuts === cuts);
+        if (!frames.length) return;
+        const group = document.createElement('div');
+        group.className = 'frame-group';
+        const h = document.createElement('h2');
+        h.textContent = `${cuts} cuts`;
+        const small = document.createElement('small');
+        small.textContent = `${cuts} photos`;
+        h.appendChild(small);
+        const grid = document.createElement('div');
+        grid.className = 'frame-grid';
+        frames.forEach(f => {
+            const card = document.createElement('button');
+            card.className = 'frame-card';
+            card.type = 'button';
+            const cnv = document.createElement('canvas');
+            drawFrameThumb(f, cnv);
+            const name = document.createElement('span');
+            name.textContent = f.name;
+            card.append(cnv, name);
+            card.addEventListener('click', () => { frame = f; goPhoto(); });
+            grid.appendChild(card);
+        });
+        group.append(h, grid);
+        root.appendChild(group);
+    });
+}
+
+function goFrame() {
+    stopCamera();
+    setStep(1);
+    showView('frame');
+}
+
+// ================= ขั้นที่ 2: ถ่ายรูป =================
+function slotRatio(i) {
+    const s = frame.slots[Math.min(i, frame.slots.length - 1)];
+    return s.w / s.h;
+}
+
+// ปรับกล่องกล้องให้เป็นสัดส่วนเดียวกับช่องรูป
+function sizeCamera() {
+    if (!frame || views.photo.hidden) return;
+    const r = slotRatio(shots.length);
+    const colW = cameraBox.parentElement.clientWidth;
+    const maxW = Math.min(colW, 640);
+    const maxH = Math.min(window.innerHeight * 0.6, 520);
+    let w = maxW, h = w / r;
+    if (h > maxH) { h = maxH; w = h * r; }
+    cameraBox.style.width = Math.round(w) + 'px';
+    cameraBox.style.height = Math.round(h) + 'px';
+    $('camera-tag').textContent = `${ratioLabel(r)} · ${frame.cuts} cuts`;
+}
+
+function renderStrip() {
+    const el = $('strip-preview');
+    el.innerHTML = '';
+    el.style.background = frame.color || '#fff';
+    frame.slots.forEach((s, i) => {
+        const slot = document.createElement('div');
+        slot.className = 'slot';
+        slot.style.left = (s.x / OUT_W * 100) + '%';
+        slot.style.top = (s.y / OUT_H * 100) + '%';
+        slot.style.width = (s.w / OUT_W * 100) + '%';
+        slot.style.height = (s.h / OUT_H * 100) + '%';
+        if (shots[i]) slot.style.backgroundImage = `url(${shots[i]})`;
+        else slot.textContent = i + 1;
+        if (i === shots.length && shooting) slot.classList.add('current');
+        el.appendChild(slot);
+    });
+    if (frame.src) {
+        const ov = document.createElement('img');
+        ov.className = 'overlay';
+        ov.src = frame.src;
+        ov.alt = '';
+        el.appendChild(ov);
+    }
+}
+
+function updateCounter() {
+    const n = Math.min(shots.length + 1, frame.cuts);
+    $('photo-counter').textContent = `Photo ${n} of ${frame.cuts}`;
+}
+
+async function startCamera() {
+    $('camera-error').hidden = true;
+    if (stream) return;
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({
+            video: { width: { ideal: 1280 }, height: { ideal: 960 }, facingMode: 'user' }
+        });
+        video.srcObject = stream;
+        await video.play().catch(() => {});
+        snapBtn.disabled = false;
+    } catch (err) {
+        console.error('Camera Error:', err);
+        $('camera-error').textContent = 'เปิดกล้องไม่ได้ (' + err.message + ') กดอนุญาตการใช้กล้องใน browser แล้วโหลดหน้าใหม่';
+        $('camera-error').hidden = false;
+        snapBtn.disabled = true;
+    }
+}
+
+function stopCamera() {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    stream = null;
+    video.srcObject = null;
+}
+
+function goPhoto() {
+    shots = [];
+    shooting = false;
+    snapBtn.textContent = '📷 Take a Photo';
+    changeFrameBtn.disabled = false;
+    setStep(2);
+    showView('photo');
+    updateCounter();
+    renderStrip();
+    sizeCamera();
+    startCamera();
+}
+
+snapBtn.addEventListener('click', () => {
+    if (shooting || !stream) return;
+    shooting = true;
+    shots = [];
+    snapBtn.disabled = true;
+    changeFrameBtn.disabled = true;
+    shootNext();
+});
+
+changeFrameBtn.addEventListener('click', () => { if (!shooting) goFrame(); });
+
+function shootNext() {
+    updateCounter();
+    sizeCamera();
+    renderStrip();
+    snapBtn.textContent = `📸 Taking photo ${shots.length + 1} / ${frame.cuts}...`;
+
+    let count = COUNTDOWN_SECONDS;
+    countdownDisplay.hidden = false;
+    countdownDisplay.textContent = count;
+    const timer = setInterval(() => {
+        count--;
+        if (count > 0) {
+            countdownDisplay.textContent = count;
+        } else if (count === 0) {
+            countdownDisplay.textContent = 'Cheese! 📸';
+        } else {
+            clearInterval(timer);
+            countdownDisplay.hidden = true;
+            capturePhoto(shots.length);
+            renderStrip();
+            if (shots.length < frame.cuts) {
+                setTimeout(shootNext, 1000);
+            } else {
+                shooting = false;
+                setTimeout(goEdit, 600);
+            }
+        }
+    }, 1000);
+}
+
+// ครอปตรงกลางของกล้องให้ได้สัดส่วนเท่าช่อง แล้วเก็บที่ความละเอียดของรูปที่เซฟ
+function capturePhoto(i) {
+    flashEffect.classList.add('flash-animate');
+    setTimeout(() => flashEffect.classList.remove('flash-animate'), 500);
+
+    const slot = frame.slots[i];
+    const r = slot.w / slot.h;
+    const vw = video.videoWidth, vh = video.videoHeight;
+    let sw, sh;
+    if (vw / vh > r) { sh = vh; sw = sh * r; } else { sw = vw; sh = sw / r; }
+    const sx = (vw - sw) / 2, sy = (vh - sh) / 2;
+
+    const c = document.createElement('canvas');
+    c.width = slot.w;
+    c.height = slot.h;
+    const ctx = c.getContext('2d');
+    ctx.translate(c.width, 0);   // กลับด้านเหมือนกระจก
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, sx, sy, sw, sh, 0, 0, c.width, c.height);
+    shots.push(c.toDataURL('image/jpeg', 0.92));
+}
+
+// ================= ขั้นที่ 3: ตกแต่ง =================
+async function goEdit() {
+    stopCamera();
+    setStep(3);
+    showView('edit');
+    resetSave();
+
+    if (!canvas) {
+        canvas = new fabric.Canvas('fabric-canvas', {
+            width: CANVAS_W, height: CANVAS_H, preserveObjectStacking: true
+        });
+        canvas.on('object:modified', markDirty);
+    }
+    canvas.clear();
+    canvas.backgroundColor = frame.color || '#ffffff';
+    fitCanvas();
+
+    try {
+        // ชั้นล่าง: รูปถ่าย
+        for (let i = 0; i < shots.length; i++) {
+            const img = await loadFabricImage(shots[i]);
+            const s = frame.slots[i];
+            img.set({
+                left: s.x * K, top: s.y * K,
+                scaleX: (s.w * K) / img.width, scaleY: (s.h * K) / img.height,
+                selectable: false, evented: false
+            });
+            canvas.add(img);
+        }
+        // ชั้นกลาง: กรอบ (สติกเกอร์ที่เพิ่มทีหลังจะอยู่บนสุด)
+        if (frame.src) {
+            const f = await loadFabricImage(frame.src);
+            f.set({
+                left: 0, top: 0,
+                scaleX: CANVAS_W / f.width, scaleY: CANVAS_H / f.height,
+                selectable: false, evented: false
+            });
+            canvas.add(f);
+        }
+    } catch (err) {
+        alert(err.message);
+    }
+    canvas.renderAll();
+}
+
+// ย่อ/ขยายการแสดงผลของ canvas ให้พอดีจอ (ขนาดจริงยังเป็น 540x960)
+function fitCanvas() {
+    if (!canvas || views.edit.hidden) return;
+    const col = document.querySelector('.edit-center');
+    const maxH = Math.max(360, Math.min(window.innerHeight - 140, 760));
+    const maxW = col.clientWidth || CANVAS_W;
+    let h = maxH, w = h * 9 / 16;
+    if (w > maxW) { w = maxW; h = w * 16 / 9; }
+    canvas.setDimensions({ width: Math.round(w) + 'px', height: Math.round(h) + 'px' }, { cssOnly: true });
+    canvas.calcOffset();
+}
+
+window.addEventListener('resize', () => { sizeCamera(); fitCanvas(); });
+
+$('retake-btn').addEventListener('click', () => {
+    if (confirm('ถ่ายใหม่? รูปและสติกเกอร์ที่ตกแต่งไว้จะหายไป')) goPhoto();
+});
+
+// ---------- สติกเกอร์ ----------
 function makeEmptyNote(text) {
     const p = document.createElement('p');
     p.className = 'empty-note';
@@ -80,34 +394,9 @@ function makeEmptyNote(text) {
     return p;
 }
 
-function renderFrameList() {
-    const list = document.getElementById('frame-list');
-    list.innerHTML = '';
-    if (FRAMES.length === 0) {
-        list.appendChild(makeEmptyNote('No frames yet'));
-        return;
-    }
-    FRAMES.forEach(frame => {
-        const thumb = makeThumb(frame.src, () => addFrame(frame));
-        thumb.dataset.slots = frame.slots ? frame.slots.length : '';
-        list.appendChild(thumb);
-    });
-    updateFrameAvailability();
-}
-
-// ทำปุ่มกรอบที่ใช้กับจำนวนช็อตปัจจุบันไม่ได้ให้จางลง
-function updateFrameAvailability() {
-    document.querySelectorAll('#frame-list .thumb-btn').forEach(thumb => {
-        const n = thumb.dataset.slots;
-        const fits = !n || Number(n) === totalPhotos;
-        thumb.classList.toggle('thumb-unavailable', !fits);
-        thumb.title = fits ? '' : `กรอบนี้ใช้กับ ${n} ช็อต`;
-    });
-}
-
 function renderStickerCategories() {
-    const tabs = document.getElementById('category-tabs');
-    const panels = document.getElementById('sticker-panels');
+    const tabs = $('category-tabs');
+    const panels = $('sticker-panels');
     tabs.innerHTML = '';
     panels.innerHTML = '';
 
@@ -115,328 +404,134 @@ function renderStickerCategories() {
         const btn = document.createElement('button');
         btn.className = 'cat-btn' + (i === 0 ? ' active' : '');
         btn.textContent = cat.label;
-        btn.addEventListener('click', () => showCategory(cat.id, btn));
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.cat-btn').forEach(b => b.classList.toggle('active', b === btn));
+            document.querySelectorAll('.sticker-category').forEach(p => { p.hidden = p.id !== cat.id; });
+        });
         tabs.appendChild(btn);
 
         const panel = document.createElement('div');
         panel.id = cat.id;
         panel.className = 'sticker-category';
-        panel.style.display = i === 0 ? 'block' : 'none';
-
+        panel.hidden = i !== 0;
         const grid = document.createElement('div');
-        grid.className = 'frame-thumbnails';
-        if (cat.items.length === 0) {
+        grid.className = 'sticker-grid';
+        if (!cat.items.length) {
             grid.appendChild(makeEmptyNote('No stickers yet'));
         } else {
-            cat.items.forEach(src => grid.appendChild(makeThumb(src, () => addSticker(src))));
+            cat.items.forEach(src => {
+                const img = document.createElement('img');
+                img.src = src;
+                img.className = 'thumb-btn';
+                img.alt = src.split('/').pop();
+                img.loading = 'lazy';
+                img.addEventListener('click', () => addSticker(src));
+                grid.appendChild(img);
+            });
         }
         panel.appendChild(grid);
         panels.appendChild(panel);
     });
 }
 
-renderFrameList();
-renderStickerCategories();
-
-// คำนวณขนาด/ตำแหน่งรูป + ปรับแถบดำบนกล้องให้ตรงกับสัดส่วนใหม่
-function updateLayout() {
-    cols = (totalPhotos === 4) ? 2 : 1;
-    rows = totalPhotos / cols;
-    const bottom = (totalPhotos === 4) ? padBottom4 : padBottom;
-
-    photoWidth = (canvasWidth - (padLeftRight * 2) - gap * (cols - 1)) / cols;
-    photoHeight = (canvasHeight - padTop - bottom - gap * (rows - 1)) / rows;
-
-    photoPositions = [];
-    for (let i = 0; i < totalPhotos; i++) {
-        photoPositions.push({
-            x: padLeftRight + (i % cols) * (photoWidth + gap),
-            y: padTop + Math.floor(i / cols) * (photoHeight + gap)
-        });
-    }
-
-    // แถบดำบนกล้อง: ถ้าช่องกว้างกว่ากล้อง ตัดบน-ล่าง / ถ้าช่องแคบกว่า ตัดซ้าย-ขวา
-    // ใช้ช่องที่ผอมที่สุด (เลย์เอาต์ปกติ หรือช่องของกรอบที่ใช้กับจำนวนช็อตนี้ได้)
-    // จะได้เห็นในกล้องเท่าที่จะติดอยู่ในรูปจริงไม่ว่าจะเลือกกรอบไหน
-    let targetRatio = photoWidth / photoHeight;
-    FRAMES.forEach(f => {
-        if (f.slots && f.slots.length === totalPhotos) {
-            f.slots.forEach(s => { targetRatio = Math.min(targetRatio, s.w / s.h); });
-        }
-    });
-    const camRatio = 640 / 480;
-    let guideTB = 0, guideLR = 0;
-    if (targetRatio > camRatio) {
-        guideTB = ((1 - (camRatio / targetRatio)) / 2) * 100;
-    } else {
-        guideLR = ((1 - (targetRatio / camRatio)) / 2) * 100;
-    }
-    document.getElementById('guide-top').style.height = guideTB + '%';
-    document.getElementById('guide-bottom').style.height = guideTB + '%';
-    document.getElementById('guide-left').style.width = guideLR + '%';
-    document.getElementById('guide-right').style.width = guideLR + '%';
-}
-updateLayout();
-
-// ================= 0. ปุ่มเลือกจำนวนช็อต =================
-document.querySelectorAll('.shot-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        totalPhotos = Number(btn.dataset.shots);
-        document.querySelectorAll('.shot-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        updateLayout();
-        updateFrameAvailability();
-    });
-});
-
-// ================= 1. เปิดกล้อง =================
-navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } })
-    .then(s => {
-        stream = s;
-        video.srcObject = stream;
-        video.onloadedmetadata = () => {
-            video.play().catch(e => console.error('Play error:', e));
-        };
-    })
-    .catch(err => {
-        console.error('Camera Error:', err);
-        alert('ไม่สามารถเปิดกล้องได้: ' + err.message);
-    });
-
-// ================= 2. ถ่ายรูป =================
-snapBtn.addEventListener('click', () => {
-    capturedPhotos = [];
-    snapBtn.disabled = true;
-    document.querySelectorAll('.shot-btn').forEach(b => b.disabled = true); // ล็อกปุ่มเลือกช็อต
-    startCountdownForPhoto(1);
-});
-
-function startCountdownForPhoto(photoNumber) {
-    let count = 5;
-    countdownDisplay.style.display = 'block';
-    countdownDisplay.innerText = count;
-    snapBtn.innerText = `📸 Taking Photo ${photoNumber} / ${totalPhotos}...`;
-
-    const timer = setInterval(() => {
-        count--;
-        if (count > 0) {
-            countdownDisplay.innerText = count;
-        } else if (count === 0) {
-            countdownDisplay.innerText = 'Cheese! 📸';
-        } else {
-            clearInterval(timer);
-            countdownDisplay.style.display = 'none';
-            captureSinglePhoto();
-            if (capturedPhotos.length < totalPhotos) {
-                setTimeout(() => startCountdownForPhoto(capturedPhotos.length + 1), 1000);
-            } else {
-                goToEditor();
-            }
-        }
-    }, 1000);
-}
-
-function captureSinglePhoto() {
-    flashEffect.classList.add('flash-animate');
-    setTimeout(() => flashEffect.classList.remove('flash-animate'), 500);
-
-    // เก็บภาพเต็มจากกล้อง แล้วค่อยครอปตอนวางลงช่อง (ช่องของแต่ละกรอบสัดส่วนไม่เท่ากัน)
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = video.videoWidth;
-    tempCanvas.height = video.videoHeight;
-    const tempCtx = tempCanvas.getContext('2d');
-    // กลับด้านเหมือนกระจก
-    tempCtx.translate(tempCanvas.width, 0);
-    tempCtx.scale(-1, 1);
-    tempCtx.drawImage(video, 0, 0);
-    capturedPhotos.push(tempCanvas.toDataURL('image/jpeg', 0.95));
-}
-
-// ================= 3. หน้าตกแต่ง =================
-function goToEditor() {
-    if (stream) stream.getTracks().forEach(track => track.stop());
-    cameraSectionWrapper.style.display = 'none';
-    editorLayout.style.display = 'flex';
-
-    if (!canvas) {
-        canvas = new fabric.Canvas('fabric-canvas', {
-            width: canvasWidth, height: canvasHeight,
-            backgroundColor: '#ffffff', preserveObjectStacking: true
-        });
-    } else {
-        canvas.clear();
-        canvas.backgroundColor = '#ffffff';
-        currentFrameObj = null;
-    }
-
-    photoObjs = [];
-    currentFrame = null;
-    updateFrameAvailability();
-    placePhotos(defaultSlots());
-}
-
-// ช่องรูปตามเลย์เอาต์ปกติ (ไม่มีกรอบ) ในหน่วยของ canvas
-function defaultSlots() {
-    return photoPositions.map(p => ({ x: p.x, y: p.y, w: photoWidth, h: photoHeight }));
-}
-
-// ช่องรูปของกรอบ แปลงจากพิกเซลบนไฟล์กรอบเป็นหน่วยของ canvas
-function frameSlots(frame, img) {
-    const sx = canvasWidth / img.width, sy = canvasHeight / img.height;
-    return frame.slots.map(s => ({ x: s.x * sx, y: s.y * sy, w: s.w * sx, h: s.h * sy }));
-}
-
-// วางรูปถ่ายลงช่อง: ขยายให้เต็มช่อง (cover) แล้วตัดส่วนเกินด้วย clipPath
-function placePhotos(slots) {
-    photoObjs.forEach(o => canvas.remove(o));
-    photoObjs = new Array(capturedPhotos.length);
-    let loaded = 0;
-    capturedPhotos.forEach((photoDataUrl, index) => {
-        fabric.Image.fromURL(photoDataUrl, function (img) {
-            const slot = slots[index];
-            const scale = Math.max(slot.w / img.width, slot.h / img.height);
-            img.set({
-                scaleX: scale, scaleY: scale,
-                left: slot.x + (slot.w - img.width * scale) / 2,
-                top: slot.y + (slot.h - img.height * scale) / 2,
-                clipPath: new fabric.Rect({
-                    left: slot.x, top: slot.y, width: slot.w, height: slot.h,
-                    absolutePositioned: true
-                }),
-                selectable: false, evented: false
-            });
-            photoObjs[index] = img;
-            loaded++;
-            if (loaded === capturedPhotos.length) {
-                // ใส่รูปไว้ชั้นล่างสุดตามลำดับ กรอบและสติกเกอร์จะอยู่ด้านบน
-                for (let i = photoObjs.length - 1; i >= 0; i--) {
-                    canvas.add(photoObjs[i]); photoObjs[i].sendToBack();
-                }
-                canvas.renderAll();
-            }
-        });
-    });
-}
-
-// กรอบรูป: อยู่เหนือรูปถ่าย ใต้สติกเกอร์
-function addFrame(frame) {
-    if (!frameFits(frame)) {
-        alert(`กรอบนี้ใช้กับ ${frame.slots.length} ช็อต (ตอนนี้ถ่าย ${totalPhotos} ช็อต)`);
-        return;
-    }
-    fabric.Image.fromURL(frame.src, function (img, isError) {
-        if (isError || !img || !img.width) { alert('หาไฟล์กรอบไม่เจอ: ' + frame.src); return; }
-        if (currentFrameObj) canvas.remove(currentFrameObj);
-        // ย้ายรูปถ่ายเข้าช่องของกรอบ (หรือกลับเลย์เอาต์ปกติถ้ากรอบไม่มีช่อง)
-        placePhotos(frame.slots ? frameSlots(frame, img) : defaultSlots());
-        currentFrame = frame;
+async function addSticker(url) {
+    try {
+        const img = await loadFabricImage(url);
+        const scale = (CANVAS_W * 0.25) / img.width;
         img.set({
-            left: 0, top: 0,
-            scaleX: canvas.width / img.width, scaleY: canvas.height / img.height,
-            selectable: false, evented: false
+            scaleX: scale, scaleY: scale,
+            transparentCorners: false, cornerColor: '#dbc7eb', cornerSize: 12, cornerStyle: 'circle'
         });
-        // ไว้ล่างสุดก่อน แล้วรูปถ่ายจะถูกแทรกไว้ใต้กรอบอีกที (สติกเกอร์อยู่บนกรอบเสมอ)
-        canvas.add(img); img.moveTo(0);
-        currentFrameObj = img; canvas.renderAll();
-    }, { crossOrigin: 'anonymous' });
-}
-
-function removeFrame() {
-    if (currentFrameObj) {
-        canvas.remove(currentFrameObj); currentFrameObj = null;
-        if (currentFrame && currentFrame.slots) placePhotos(defaultSlots());
-        currentFrame = null;
-        canvas.renderAll();
+        canvas.add(img);
+        img.center().setCoords();
+        canvas.setActiveObject(img);
+        markDirty();
+    } catch (err) {
+        alert(err.message);
     }
-}
-
-// สติกเกอร์: อยู่บนสุด ลาก/ย่อ/หมุนได้
-function addSticker(url) {
-    fabric.Image.fromURL(url, function (img, isError) {
-        if (isError || !img || !img.width) { alert('หาไฟล์สติกเกอร์ไม่เจอ: ' + url); return; }
-        img.set({ scaleX: 0.25, scaleY: 0.25, transparentCorners: false, cornerColor: '#dbc7eb', cornerSize: 12, cornerStyle: 'circle' });
-        canvas.add(img); img.center().setCoords(); canvas.setActiveObject(img);
-    }, { crossOrigin: 'anonymous' });
 }
 
 function deleteSelected() {
     if (!canvas) return;
-    const activeObject = canvas.getActiveObject();
-    if (activeObject) canvas.remove(activeObject);
+    const obj = canvas.getActiveObject();
+    if (obj && obj.selectable) { canvas.remove(obj); markDirty(); }
 }
 
+$('delete-btn').addEventListener('click', deleteSelected);
+
 window.addEventListener('keydown', (e) => {
+    if (views.edit.hidden) return;
     if (e.key === 'Delete' || e.key === 'Backspace') deleteSelected();
 });
 
-function showCategory(categoryId, btnElement) {
-    document.querySelectorAll('.sticker-category').forEach(cat => cat.style.display = 'none');
-    document.querySelectorAll('.cat-btn').forEach(btn => btn.classList.remove('active'));
-    const target = document.getElementById(categoryId);
-    if (target) {
-        target.style.display = 'block';
-        btnElement.classList.add('active');
-    }
+// ================= ขั้นที่ 4: เซฟ + QR =================
+function resetSave() {
+    saved = false;
+    saveBtn.disabled = false;
+    saveBtn.textContent = '💾 Save Image';
+    qrCard.hidden = true;
 }
 
-// ================= 4. บันทึกรูป (1080x1920) =================
-document.getElementById('download-btn').addEventListener('click', () => {
+// แก้รูปหลังเซฟ = ต้องเซฟใหม่ (QR เดิมเป็นรูปเก่า)
+function markDirty() {
+    if (!saved) return;
+    resetSave();
+    setStep(3);
+}
+
+saveBtn.addEventListener('click', async () => {
+    if (saved || !canvas) return;
     canvas.discardActiveObject().renderAll();
-    const dataURL = canvas.toDataURL({ format: 'png', quality: 1, multiplier: 2 });
+    const dataURL = canvas.toDataURL({ format: 'png', multiplier: OUT_W / CANVAS_W });
+
+    // เซฟลงเครื่องก่อนเสมอ
     const link = document.createElement('a');
-    link.download = 'booth_photo.png'; link.href = dataURL; link.click();
-});
+    link.download = 'photobooth_' + Date.now() + '.png';
+    link.href = dataURL;
+    link.click();
 
-// ================= 5. ถ่ายใหม่ =================
-document.getElementById('retake-btn').addEventListener('click', () => {
-    if (confirm('ถ่ายใหม่? รูปที่ตกแต่งไว้จะหายไป')) location.reload();
-});
-
-// ================= 6. อัปโหลด + QR Code =================
-async function uploadToDrive() {
-    const modal = document.getElementById('qr-modal');
-    const qrDisplay = document.getElementById('qr-display');
-    const linkArea = document.getElementById('qr-link-area');
-    const title = document.getElementById('modal-title');
-
-    modal.style.display = 'flex';
-    linkArea.style.display = 'none';
+    saved = true;
+    setStep(4);
+    saveBtn.disabled = true;
+    saveBtn.textContent = '⏳ Saving...';
+    qrCard.hidden = false;
 
     if (!SCRIPT_URL) {
-        title.innerText = 'Not set up yet';
-        qrDisplay.innerHTML = '<span style="font-size:14px;">ยังไม่ได้ตั้งค่า SCRIPT_URL ใน script.js</span>';
-        linkArea.style.display = 'block';
+        qrDisplay.innerHTML = '<span>Saved to this device.</span>';
+        $('qr-hint').textContent = 'QR upload is not set up yet (SCRIPT_URL in script.js is empty).';
+        saveBtn.textContent = '✓ Saved';
         return;
     }
 
-    title.innerText = 'Wait a second...';
-    qrDisplay.innerHTML = '<div class="loading-spinner"></div><span>Uploading & Backing up...</span>';
+    qrDisplay.innerHTML = '<div class="loading-spinner"></div><span>Uploading...</span>';
     try {
-        canvas.discardActiveObject().renderAll();
-        const photoDataURL = canvas.toDataURL({ format: 'png', quality: 0.8, multiplier: 2 });
-
-        // สำรองไฟล์ลงเครื่องก่อน เผื่ออัปโหลดไม่สำเร็จ
-        const backupLink = document.createElement('a');
-        backupLink.href = photoDataURL; backupLink.download = 'booth_backup_' + Date.now() + '.png'; backupLink.click();
-
         const payload = JSON.stringify({
-            photoBase64: photoDataURL,
+            photoBase64: dataURL,
             sessionName: 'Booth_' + new Date().toISOString().replace(/[:.]/g, '-'),
             photoName: 'final_photo.png'
         });
         const response = await fetch(SCRIPT_URL, { method: 'POST', mode: 'cors', body: payload });
         const result = await response.json();
         if (result.status !== 'success') throw new Error(result.message);
+        if (!saved) return;   // แก้รูประหว่างอัปโหลด
 
-        const qrImageUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(result.folderUrl);
-        title.innerText = 'Success! ✨';
-        qrDisplay.innerHTML = '<img src="' + qrImageUrl + '" style="width:180px;border-radius:10px;"><p style="font-size:14px;margin-top:10px;">สแกนเพื่อรับรูปของคุณ</p>';
+        const qrImageUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(result.folderUrl);
+        qrDisplay.innerHTML = '';
+        const img = document.createElement('img');
+        img.src = qrImageUrl;
+        img.alt = 'QR code to your photo';
+        qrDisplay.appendChild(img);
+        $('qr-hint').textContent = 'Opens your Google Drive folder so you can download the photo to your phone.';
     } catch (error) {
         console.error('Upload error:', error);
-        title.innerText = 'Error ❌';
-        qrDisplay.innerHTML = '<span style="color:red;font-size:14px;">Upload failed. แต่คุณมีไฟล์สำรองในเครื่องแล้ว!</span>';
+        if (!saved) return;
+        qrDisplay.innerHTML = '<span class="error">Upload failed.</span>';
+        $('qr-hint').textContent = 'The photo is already saved on this device.';
     }
-    linkArea.style.display = 'block';
-}
+    if (saved) saveBtn.textContent = '✓ Saved';
+});
 
-function closeQRModal() { document.getElementById('qr-modal').style.display = 'none'; }
+// ================= เริ่มต้น =================
+renderFrameGroups();
+renderStickerCategories();
+goFrame();
