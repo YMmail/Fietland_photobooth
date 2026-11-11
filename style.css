@@ -359,7 +359,7 @@ button { font-family: inherit; }
     font-size: 15px;
 }
 
-#qr-display img { width: 170px; height: 170px; image-rendering: pixelated; }
+#qr-display img { width: 170px; height: 170px; image-rendering: pixelated; display: block; }
 #qr-display .error { color: #b3261e; }
 
 .category-tabs {
@@ -447,3 +447,6 @@ button { font-family: inherit; }
     .flash-animate { animation: none; }
     .frame-card, .thumb-btn, .btn { transition: none; }
 }
+
+.qr-status { margin-top: 8px; font-size: 16px; }
+.qr-status.error { color: #b3261e; }

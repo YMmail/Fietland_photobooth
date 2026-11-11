@@ -64,6 +64,9 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw4F0bouElg00hvU3tvv
 
 const COUNTDOWN_SECONDS = 5;
 
+// QR ที่แสดงหลังกด Save: พาไปโฟลเดอร์ Google Drive ที่เก็บรูป
+const QR_IMAGE = 'ui/qr-fietland-drive.png';
+
 // ================= DOM =================
 const $ = id => document.getElementById(id);
 const views = { frame: $('view-frame'), photo: $('view-photo'), edit: $('view-edit') };
@@ -496,14 +499,23 @@ saveBtn.addEventListener('click', async () => {
     saveBtn.textContent = '⏳ Saving...';
     qrCard.hidden = false;
 
+    // แสดง QR โฟลเดอร์ Drive ทันที แล้วบอกชื่อไฟล์เมื่ออัปโหลดเสร็จ
+    qrDisplay.innerHTML = '';
+    const qrImg = document.createElement('img');
+    qrImg.src = QR_IMAGE;
+    qrImg.alt = 'QR code to the photo folder in Google Drive';
+    const status = document.createElement('span');
+    status.className = 'qr-status';
+    qrDisplay.append(qrImg, status);
+    $('qr-hint').textContent = 'Opens the photo folder in Google Drive. Find your photo by its name and download it to your phone.';
+
     if (!SCRIPT_URL) {
-        qrDisplay.innerHTML = '<span>Saved to this device.</span>';
-        $('qr-hint').textContent = 'QR upload is not set up yet (SCRIPT_URL in script.js is empty).';
+        status.textContent = 'Saved to this device.';
         saveBtn.textContent = '✓ Saved';
         return;
     }
 
-    qrDisplay.innerHTML = '<div class="loading-spinner"></div><span>Uploading...</span>';
+    status.textContent = '⏳ Uploading...';
     try {
         const stamp = new Date().toISOString().replace(/[:.]/g, '-');
         const payload = JSON.stringify({
@@ -518,23 +530,14 @@ saveBtn.addEventListener('click', async () => {
         if (result.status !== 'success') throw new Error(result.message);
         if (!saved) return;   // แก้รูประหว่างอัปโหลด
 
-        // QR พาไปที่ไฟล์รูปโดยตรง (fileUrl) ถ้าสคริปต์ยังเป็นตัวเก่าจะได้ลิงก์โฟลเดอร์แทน
-        const target = result.fileUrl || result.folderUrl;
-        if (!target) throw new Error('Apps Script did not return a link');
-        const qrImageUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(target);
-        qrDisplay.innerHTML = '';
-        const img = document.createElement('img');
-        img.src = qrImageUrl;
-        img.alt = 'QR code to your photo';
-        qrDisplay.appendChild(img);
-        $('qr-hint').textContent = result.fileUrl
-            ? 'Opens your photo in Google Drive. Tap download to save it to your phone.'
-            : 'Opens your Google Drive folder so you can download the photo to your phone.';
+        status.textContent = result.fileName
+            ? 'Your photo: ' + result.fileName.replace(/\.png$/i, '')
+            : '✓ Uploaded';
     } catch (error) {
         console.error('Upload error:', error);
         if (!saved) return;
-        qrDisplay.innerHTML = '<span class="error">Upload failed.</span>';
-        $('qr-hint').textContent = 'The photo is already saved on this device.';
+        status.textContent = 'Upload failed. The photo is saved on this device.';
+        status.classList.add('error');
     }
     if (saved) saveBtn.textContent = '✓ Saved';
 });
