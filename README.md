@@ -36,8 +36,17 @@ const STICKER_CATEGORIES = [
 ชื่อไฟล์ต้องตรงตัวพิมพ์เล็ก/ใหญ่ (`.png` ≠ `.PNG`) เมื่อขึ้นเซิร์ฟเวอร์จริง
 
 ## อัปโหลด + QR
-ตั้งค่า URL ของ Google Apps Script ไว้ใน `SCRIPT_URL` (ต้องตอบกลับ `{status:'success', folderUrl}`)
-ถ้าเว้นว่าง ปุ่ม Get QR จะแจ้งว่ายังไม่ได้ตั้งค่า
+กด Save Image แล้วเว็บจะส่งรูปไปที่ Google Apps Script (`SCRIPT_URL` ใน `script.js`)
+สคริปต์เซฟรูปลงโฟลเดอร์ `Photobooth` ใน Google Drive แล้วส่งลิงก์ของรูปกลับมา เว็บเอาลิงก์นั้นไปทำ QR
+
+โค้ดฝั่ง Apps Script อยู่ที่ `apps-script/Code.gs` วิธีอัปเดต:
+1. เปิดโปรเจกต์ Apps Script เดิม (script.google.com) แล้ววางโค้ดจาก `Code.gs` แทนของเดิม กด Save
+2. **Deploy → Manage deployments** → กดดินสอ (Edit) ที่ deployment เดิม
+3. ช่อง Version เลือก **New version**, Execute as: **Me**, Who has access: **Anyone** → **Deploy**
+4. ถ้าระบบขอสิทธิ์ ให้กด Authorize
+
+แก้ deployment เดิมแบบนี้ URL จะไม่เปลี่ยน ไม่ต้องแก้ `SCRIPT_URL`
+(ถ้ากด New deployment จะได้ URL ใหม่ ต้องเอาไปใส่ใน `SCRIPT_URL` ด้วย)
 
 ## การรัน
 ต้องเปิดผ่าน `https://` หรือ `localhost` (กล้องจะไม่ทำงานบน `file://`) เช่น

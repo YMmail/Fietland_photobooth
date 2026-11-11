@@ -505,9 +505,12 @@ saveBtn.addEventListener('click', async () => {
 
     qrDisplay.innerHTML = '<div class="loading-spinner"></div><span>Uploading...</span>';
     try {
+        const stamp = new Date().toISOString().replace(/[:.]/g, '-');
         const payload = JSON.stringify({
             photoBase64: dataURL,
-            sessionName: 'Booth_' + new Date().toISOString().replace(/[:.]/g, '-'),
+            fileName: 'Booth_' + stamp + '.png',
+            // 2 ค่านี้ไว้ให้ Apps Script ตัวเก่ายังใช้ได้
+            sessionName: 'Booth_' + stamp,
             photoName: 'final_photo.png'
         });
         const response = await fetch(SCRIPT_URL, { method: 'POST', mode: 'cors', body: payload });
@@ -515,13 +518,18 @@ saveBtn.addEventListener('click', async () => {
         if (result.status !== 'success') throw new Error(result.message);
         if (!saved) return;   // แก้รูประหว่างอัปโหลด
 
-        const qrImageUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(result.folderUrl);
+        // QR พาไปที่ไฟล์รูปโดยตรง (fileUrl) ถ้าสคริปต์ยังเป็นตัวเก่าจะได้ลิงก์โฟลเดอร์แทน
+        const target = result.fileUrl || result.folderUrl;
+        if (!target) throw new Error('Apps Script did not return a link');
+        const qrImageUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(target);
         qrDisplay.innerHTML = '';
         const img = document.createElement('img');
         img.src = qrImageUrl;
         img.alt = 'QR code to your photo';
         qrDisplay.appendChild(img);
-        $('qr-hint').textContent = 'Opens your Google Drive folder so you can download the photo to your phone.';
+        $('qr-hint').textContent = result.fileUrl
+            ? 'Opens your photo in Google Drive. Tap download to save it to your phone.'
+            : 'Opens your Google Drive folder so you can download the photo to your phone.';
     } catch (error) {
         console.error('Upload error:', error);
         if (!saved) return;
