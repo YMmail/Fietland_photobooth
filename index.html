@@ -7,8 +7,7 @@
     <title>My Korean Photobooth (9:16)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Glass+Antiqua&family=League+Spartan:wght@100..900&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Glass+Antiqua&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -39,164 +38,33 @@
             <div class="sidebar">
                 <div class="tool-block">
                     <h3>🖼️ Choose your frame</h3>
-                    <div class="frame-thumbnails">
-                        <!-- กรอบรูป (Frames) -->
-                        <img src="frames/Untitleddesign (17).png" class="thumb-btn"
-                            onclick="addFrame('frames/Untitleddesign (17).png')" alt="Frame 17">
-                        <img src="frames/Untitleddesign (18).png" class="thumb-btn"
-                            onclick="addFrame('frames/Untitleddesign (18).png')" alt="Frame 18">
-                        <img src="frames/Untitleddesign (19).png" class="thumb-btn"
-                            onclick="addFrame('frames/Untitleddesign (19).png')" alt="Frame 19">
-                        <img src="frames/Untitleddesign (1).png" class="thumb-btn"
-                            onclick="addFrame('frames/Untitleddesign (1).png')" alt="Frame 1">
-                        <img src="frames/Untitleddesign (2).png" class="thumb-btn"
-                            onclick="addFrame('frames/Untitleddesign (2).png')" alt="Frame 2">
-                        <img src="frames/Untitleddesign (3).png" class="thumb-btn"
-                            onclick="addFrame('frames/Untitleddesign (3).png')" alt="Frame 3">
-                        <img src="frames/Untitleddesign (4).png" class="thumb-btn"
-                            onclick="addFrame('frames/Untitleddesign (4).png')" alt="Frame 4">
-                        <img src="frames/Untitleddesign (5).png" class="thumb-btn"
-                            onclick="addFrame('frames/Untitleddesign (5).png')" alt="Frame 5">
-                        <img src="frames/Untitleddesign (6).png" class="thumb-btn"
-                            onclick="addFrame('frames/Untitleddesign (6).png')" alt="Frame 6">
-                        <img src="frames/Untitleddesign (7).png" class="thumb-btn"
-                            onclick="addFrame('frames/Untitleddesign (7).png')" alt="Frame 7">
-                        <img src="frames/Untitleddesign (8).png" class="thumb-btn"
-                            onclick="addFrame('frames/Untitleddesign (8).png')" alt="Frame 8">
-                        <img src="frames/Untitleddesign (9).png" class="thumb-btn"
-                            onclick="addFrame('frames/Untitleddesign (9).png')" alt="Frame 9">
-                        <img src="frames/Untitleddesign (10).png" class="thumb-btn"
-                            onclick="addFrame('frames/Untitleddesign (10).png')" alt="Frame 10">
-                        <img src="frames/Untitleddesign (11).png" class="thumb-btn"
-                            onclick="addFrame('frames/Untitleddesign (11).png')" alt="Frame 11">
-                        <img src="frames/Untitleddesign (12).png" class="thumb-btn"
-                            onclick="addFrame('frames/Untitleddesign (12).png')" alt="Frame 12">
-                        <img src="frames/Untitleddesign (13).png" class="thumb-btn"
-                            onclick="addFrame('frames/Untitleddesign (13).png')" alt="Frame 13">
-                        <img src="frames/Untitleddesign (14).png" class="thumb-btn"
-                            onclick="addFrame('frames/Untitleddesign (14).png')" alt="Frame 14">
-                        <img src="frames/Untitleddesign (15).png" class="thumb-btn"
-                            onclick="addFrame('frames/Untitleddesign (15).png')" alt="Frame 15">
-                        <img src="frames/Untitleddesign (16).png" class="thumb-btn"
-                            onclick="addFrame('frames/Untitleddesign (16).png')" alt="Frame 16">
-                        <img src="frames/Untitleddesign (20).png" class="thumb-btn"
-                            onclick="addFrame('frames/Untitleddesign (20).png')" alt="Frame 20">
-                    </div>
+                    <!-- สร้างจาก FRAMES ใน script.js -->
+                    <div class="frame-thumbnails" id="frame-list"></div>
                     <button class="btn-remove" onclick="removeFrame()" style="margin-top: 10px;">❌ Delete frame</button>
                 </div>
-                <div class="tool-block"
-                    style="background-color: transparent; border: none; padding: 0;">
+                <div class="tool-block tool-block-plain">
                     <button class="btn-retake" id="retake-btn">🔄 Retake image</button>
                 </div>
             </div>
 
-            <div class="middle-column" style="display: flex; flex-direction: column; align-items: center;">
+            <div class="middle-column">
                 <div id="canvas-wrapper">
                     <canvas id="fabric-canvas"></canvas>
                 </div>
-                <div style="margin-top: 20px; width: 100%; display: flex; justify-content: center;">
-                    <button class="btn-qr-get" id="qr-btn" onclick="uploadToDrive()" style="width: 250px;">📱 Get QR
-                        Code</button>
+                <div class="qr-btn-row">
+                    <button class="btn-qr-get" id="qr-btn" onclick="uploadToDrive()">📱 Get QR Code</button>
                 </div>
             </div>
 
             <div class="sidebar">
                 <div class="tool-block">
                     <h3>✨ Let's Decorate</h3>
-                    <div class="category-tabs">
-                        <button class="cat-btn active" onclick="showCategory('cat-1', this)">✨ deco</button>
-                        <button class="cat-btn" onclick="showCategory('cat-2', this)">🎪 festival</button>
-                        <button class="cat-btn" onclick="showCategory('cat-3', this)">🐣 cmm</button>
-                        <button class="cat-btn" onclick="showCategory('cat-4', this)">🍭 sweets</button>
-                    </div>
-
-                    <!-- Stickers Categories -->
-                    <div id="cat-1" class="sticker-category" style="display: block;">
-                        <div class="frame-thumbnails">
-                            <img src="stickers/deco/Bowblue.PNG" class="thumb-btn" onclick="addSticker('stickers/deco/Bowblue.PNG')" alt="Bowblue">
-                            <img src="stickers/deco/Bowgreen.PNG" class="thumb-btn" onclick="addSticker('stickers/deco/Bowgreen.PNG')" alt="Bowgreen">
-                            <img src="stickers/deco/Bowpink.PNG" class="thumb-btn" onclick="addSticker('stickers/deco/Bowpink.PNG')" alt="Bowpink">
-                            <img src="stickers/deco/heartblue.PNG" class="thumb-btn" onclick="addSticker('stickers/deco/heartblue.PNG')" alt="heartblue">
-                            <img src="stickers/deco/heartbrown.PNG" class="thumb-btn" onclick="addSticker('stickers/deco/heartbrown.PNG')" alt="heartbrown">
-                            <img src="stickers/deco/heartgreen.PNG" class="thumb-btn" onclick="addSticker('stickers/deco/heartgreen.PNG')" alt="heartgreen">
-                            <img src="stickers/deco/heartpink.PNG" class="thumb-btn" onclick="addSticker('stickers/deco/heartpink.PNG')" alt="heartpink">
-                            <img src="stickers/deco/heartpurple.PNG" class="thumb-btn" onclick="addSticker('stickers/deco/heartpurple.PNG')" alt="heartpurple">
-                            <img src="stickers/deco/heartyellow.PNG" class="thumb-btn" onclick="addSticker('stickers/deco/heartyellow.PNG')" alt="heartyellow">
-                            <img src="stickers/deco/Rainbow1.PNG" class="thumb-btn" onclick="addSticker('stickers/deco/Rainbow1.PNG')" alt="Rainbow1">
-                            <img src="stickers/deco/Rainbow2.PNG" class="thumb-btn" onclick="addSticker('stickers/deco/Rainbow2.PNG')" alt="Rainbow2">
-                            <img src="stickers/deco/starblue.PNG" class="thumb-btn" onclick="addSticker('stickers/deco/starblue.PNG')" alt="starblue">
-                            <img src="stickers/deco/starbluecheck.PNG" class="thumb-btn" onclick="addSticker('stickers/deco/starbluecheck.PNG')" alt="starbluecheck">
-                            <img src="stickers/deco/starpink.PNG" class="thumb-btn" onclick="addSticker('stickers/deco/starpink.PNG')" alt="starpink">
-                            <img src="stickers/deco/starpinkbl.PNG" class="thumb-btn" onclick="addSticker('stickers/deco/starpinkbl.PNG')" alt="starpinkbl">
-                            <img src="stickers/deco/starpinkcheck.PNG" class="thumb-btn" onclick="addSticker('stickers/deco/starpinkcheck.PNG')" alt="starpinkcheck">
-                            <img src="stickers/deco/starwhite.PNG" class="thumb-btn" onclick="addSticker('stickers/deco/starwhite.PNG')" alt="starwhite">
-                            <img src="stickers/deco/staryel.PNG" class="thumb-btn" onclick="addSticker('stickers/deco/staryel.PNG')" alt="staryel">
-                            <img src="stickers/deco/staryelbl.PNG" class="thumb-btn" onclick="addSticker('stickers/deco/staryelbl.PNG')" alt="staryelbl">
-                            <img src="stickers/deco/staryelcheck.PNG" class="thumb-btn" onclick="addSticker('stickers/deco/staryelcheck.PNG')" alt="staryelcheck">
-                            <img src="stickers/deco/staryelpink.PNG" class="thumb-btn" onclick="addSticker('stickers/deco/staryelpink.PNG')" alt="staryelpink">
-                            <img src="stickers/deco/Winkblue.PNG" class="thumb-btn" onclick="addSticker('stickers/deco/Winkblue.PNG')" alt="Winkblue">
-                            <img src="stickers/deco/Winkpink.PNG" class="thumb-btn" onclick="addSticker('stickers/deco/Winkpink.PNG')" alt="Winkpink">
-                            <img src="stickers/deco/Winkpurplebl.PNG" class="thumb-btn" onclick="addSticker('stickers/deco/Winkpurplebl.PNG')" alt="Winkpurplebl">
-                            <img src="stickers/deco/Winkyellow.PNG" class="thumb-btn" onclick="addSticker('stickers/deco/Winkyellow.PNG')" alt="Winkyellow">
-                            <img src="stickers/deco/Winkyelpink.PNG" class="thumb-btn" onclick="addSticker('stickers/deco/Winkyelpink.PNG')" alt="Winkyelpink">
-                        </div>
-                    </div>
-                    <div id="cat-2" class="sticker-category" >
-                        <div class="frame-thumbnails">
-                            <img src="stickers/festival/Bunting1.png" class="thumb-btn" onclick="addSticker('stickers/festival/Bunting1.png')" alt="Bunting1">
-                            <img src="stickers/festival/Bunting2.png" class="thumb-btn" onclick="addSticker('stickers/festival/Bunting2.png')" alt="Bunting2">
-                            <img src="stickers/festival/Butterflybluepink.png" class="thumb-btn" onclick="addSticker('stickers/festival/Butterflybluepink.png')" alt="Butterflybluepink">
-                            <img src="stickers/festival/Butterflygreenyellow.png" class="thumb-btn" onclick="addSticker('stickers/festival/Butterflygreenyellow.png')" alt="Butterflygreenyellow">
-                            <img src="stickers/festival/Butterflyorangeblue.png" class="thumb-btn" onclick="addSticker('stickers/festival/Butterflyorangeblue.png')" alt="Butterflyorangeblue">
-                            <img src="stickers/festival/Butterflyorangeyellow.png" class="thumb-btn" onclick="addSticker('stickers/festival/Butterflyorangeyellow.png')" alt="Butterflyorangeyellow">
-                            <img src="stickers/festival/Butterflypinkpurple.png" class="thumb-btn" onclick="addSticker('stickers/festival/Butterflypinkpurple.png')" alt="Butterflypinkpurple">
-                            <img src="stickers/festival/Butterflypinkyellow.png" class="thumb-btn" onclick="addSticker('stickers/festival/Butterflypinkyellow.png')" alt="Butterflypinkyellow">
-                            <img src="stickers/festival/Dog balloon blue.png" class="thumb-btn" onclick="addSticker('stickers/festival/Dog balloon blue.png')" alt="Dog balloon blue">
-                            <img src="stickers/festival/Dog balloon green.png" class="thumb-btn" onclick="addSticker('stickers/festival/Dog balloon green.png')" alt="Dog balloon green">
-                            <img src="stickers/festival/Dog balloon orange.png" class="thumb-btn" onclick="addSticker('stickers/festival/Dog balloon orange.png')" alt="Dog balloon orange">
-                            <img src="stickers/festival/Dog balloon pink.png" class="thumb-btn" onclick="addSticker('stickers/festival/Dog balloon pink.png')" alt="Dog balloon pink">
-                            <img src="stickers/festival/Dog balloon red.png" class="thumb-btn" onclick="addSticker('stickers/festival/Dog balloon red.png')" alt="Dog balloon red">
-                            <img src="stickers/festival/Dog balloon yellow.png" class="thumb-btn" onclick="addSticker('stickers/festival/Dog balloon yellow.png')" alt="Dog balloon yellow">
-                            <img src="stickers/festival/Flower blue.png" class="thumb-btn" onclick="addSticker('stickers/festival/Flower blue.png')" alt="Flower blue">
-                            <img src="stickers/festival/Flower orange.png" class="thumb-btn" onclick="addSticker('stickers/festival/Flower orange.png')" alt="Flower orange">
-                            <img src="stickers/festival/Flower pink.png" class="thumb-btn" onclick="addSticker('stickers/festival/Flower pink.png')" alt="Flower pink">
-                            <img src="stickers/festival/Flower purple.png" class="thumb-btn" onclick="addSticker('stickers/festival/Flower purple.png')" alt="Flower purple">
-                            <img src="stickers/festival/heart ballon orange.png" class="thumb-btn" onclick="addSticker('stickers/festival/heart ballon orange.png')" alt="heart ballon orange">
-                            <img src="stickers/festival/heart balloon blue.png" class="thumb-btn" onclick="addSticker('stickers/festival/heart balloon blue.png')" alt="heart balloon blue">
-                            <img src="stickers/festival/heart balloon pink.png" class="thumb-btn" onclick="addSticker('stickers/festival/heart balloon pink.png')" alt="heart balloon pink">
-                            <img src="stickers/festival/heart balloon purple.png" class="thumb-btn" onclick="addSticker('stickers/festival/heart balloon purple.png')" alt="heart balloon purple">
-                            <img src="stickers/festival/heart balloon red.png" class="thumb-btn" onclick="addSticker('stickers/festival/heart balloon red.png')" alt="heart balloon red">
-                            <img src="stickers/festival/heart balloon yellow.png" class="thumb-btn" onclick="addSticker('stickers/festival/heart balloon yellow.png')" alt="heart balloon yellow">
-                        </div>
-                    </div>
-                    <div id="cat-3" class="sticker-category" >
-                        <div class="frame-thumbnails">
-                            <img src="stickers/cmm/Duck.png" class="thumb-btn" onclick="addSticker('stickers/cmm/Duck.png')" alt="Duck">
-                            <img src="stickers/cmm/Duckboy.png" class="thumb-btn" onclick="addSticker('stickers/cmm/Duckboy.png')" alt="Duckboy">
-                            <img src="stickers/cmm/Duckgirl.png" class="thumb-btn" onclick="addSticker('stickers/cmm/Duckgirl.png')" alt="Duckgirl">
-                            <img src="stickers/cmm/Ducktaibangmod.png" class="thumb-btn" onclick="addSticker('stickers/cmm/Ducktaibangmod.png')" alt="Ducktaibangmod">
-                            <img src="stickers/cmm/Ducktaicmm.png" class="thumb-btn" onclick="addSticker('stickers/cmm/Ducktaicmm.png')" alt="Ducktaicmm">
-                            <img src="stickers/cmm/Ducktaikaru.png" class="thumb-btn" onclick="addSticker('stickers/cmm/Ducktaikaru.png')" alt="Ducktaikaru">
-                            <img src="stickers/cmm/ilovecmm.png" class="thumb-btn" onclick="addSticker('stickers/cmm/ilovecmm.png')" alt="ilovecmm">
-                        </div>
-                    </div>
-                    <div id="cat-4" class="sticker-category" >
-                        <div class="frame-thumbnails">
-                            <img src="stickers/sweets/Cadypinkpurple.PNG" class="thumb-btn" onclick="addSticker('stickers/sweets/Cadypinkpurple.PNG')" alt="Cadypinkpurple">
-                            <img src="stickers/sweets/Candygreenblue.PNG" class="thumb-btn" onclick="addSticker('stickers/sweets/Candygreenblue.PNG')" alt="Candygreenblue">
-                            <img src="stickers/sweets/Candylinepinkblue.PNG" class="thumb-btn" onclick="addSticker('stickers/sweets/Candylinepinkblue.PNG')" alt="Candylinepinkblue">
-                            <img src="stickers/sweets/Candypinkblue.PNG" class="thumb-btn" onclick="addSticker('stickers/sweets/Candypinkblue.PNG')" alt="Candypinkblue">
-                            <img src="stickers/sweets/Candyyellowpink.PNG" class="thumb-btn" onclick="addSticker('stickers/sweets/Candyyellowpink.PNG')" alt="Candyyellowpink">
-                            <img src="stickers/sweets/Icecream1.PNG" class="thumb-btn" onclick="addSticker('stickers/sweets/Icecream1.PNG')" alt="Icecream1">
-                            <img src="stickers/sweets/Icecream2.PNG" class="thumb-btn" onclick="addSticker('stickers/sweets/Icecream2.PNG')" alt="Icecream2">
-                        </div>
-                    </div>
-
-                    <button class="btn-remove" onclick="deleteSelected()" style="margin-top: 15px;">🗑️ Delete
-                        selected</button>
+                    <!-- สร้างจาก STICKER_CATEGORIES ใน script.js -->
+                    <div class="category-tabs" id="category-tabs"></div>
+                    <div id="sticker-panels"></div>
+                    <button class="btn-remove" onclick="deleteSelected()" style="margin-top: 15px;">🗑️ Delete selected</button>
                 </div>
-
-                <div class="tool-block" style="background-color: transparent; border: none; padding: 0;">
+                <div class="tool-block tool-block-plain">
                     <button class="btn-success" id="download-btn">💾 Save image</button>
                 </div>
             </div>

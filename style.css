@@ -2,11 +2,16 @@
 body {
     font-size: 24px;
     font-family: 'Glass Antiqua', sans-serif;
-    background-image: url('ui/webbgstar-100.jpg');
+    /* พื้นหลังท้องฟ้ากลางคืนแบบพิกเซล: ยึดภูเขาไว้ด้านล่างเสมอ */
+    background-color: #0d0b2e; /* สีท้องฟ้า ใช้ระหว่างรอโหลดรูป */
+    background-image: url('ui/bg.png');
     background-size: cover;
     background-repeat: no-repeat;
-    background-position: center center;
+    background-position: center bottom;
     background-attachment: fixed;
+    image-rendering: pixelated; /* ให้พิกเซลคม ไม่เบลอเวลาขยาย */
+    min-height: 100vh;
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -14,11 +19,9 @@ body {
     padding: 20px;
 }
 
-.app-logo {
-    max-width: 500px;
-    height: auto;
-    margin-bottom: 20px;
-    filter: drop-shadow(2px 4px 6px rgba(0, 0, 0, 0.1));
+/* คืนค่าการเรนเดอร์ภาพปกติให้รูปถ่าย/สติกเกอร์ (image-rendering สืบทอดจาก body) */
+body > * {
+    image-rendering: auto;
 }
 
 .app-container {
@@ -319,6 +322,36 @@ button:disabled {
 }
 
 .btn-qr-get:hover { background: #a27cc5; color: white; }
+
+/* ---------------- เพิ่มเติม (แทน inline style เดิม) ---------------- */
+.middle-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.qr-btn-row {
+    margin-top: 20px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.qr-btn-row .btn-qr-get { width: 250px; }
+
+.tool-block-plain {
+    background-color: transparent;
+    border: none;
+    padding: 0;
+}
+
+.empty-note {
+    grid-column: 1 / -1;
+    margin: 10px 0;
+    font-size: 14px;
+    color: #999;
+    text-align: center;
+}
 
 /* ---------------- ปุ่มเลือกจำนวนช็อต ---------------- */
 .shot-select {
