@@ -548,13 +548,14 @@ saveBtn.addEventListener('click', async () => {
         if (result.status !== 'success') throw new Error(result.message);
         if (!saved) return;   // แก้รูประหว่างอัปโหลด
 
+        // ไม่มี fileName = Apps Script ที่ทำงานอยู่ยังเป็นตัวเก่า (ยังไม่ได้ Deploy เวอร์ชันใหม่)
         status.textContent = result.fileName
             ? 'Your photo: ' + result.fileName.replace(/\.png$/i, '')
-            : '✓ Uploaded';
+            : '✓ Uploaded (old Apps Script version — file not renamed)';
     } catch (error) {
         console.error('Upload error:', error);
         if (!saved) return;
-        status.textContent = 'Upload failed. The photo is saved on this device.';
+        status.textContent = 'Upload failed: ' + (error && error.message ? error.message : error) + '. The photo is saved on this device.';
         status.classList.add('error');
     }
     if (saved) saveBtn.textContent = '✓ Saved';
