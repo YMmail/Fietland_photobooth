@@ -37,7 +37,7 @@ const STICKER_CATEGORIES = [
 
 ## อัปโหลด + QR
 กด Save Image แล้วเว็บจะส่งรูปไปที่ Google Apps Script (`SCRIPT_URL` ใน `script.js`)
-สคริปต์เซฟรูปลงโฟลเดอร์ `Photobooth` ใน Google Drive แล้วส่งลิงก์ของรูปกลับมา เว็บเอาลิงก์นั้นไปทำ QR
+สคริปต์เซฟรูปลงโฟลเดอร์ Drive ที่ตั้งไว้ใน `FOLDER_ID` (ชื่อไฟล์ `01_Fietland.png`, `02_Fietland.png`, ...) แล้วส่งลิงก์ของรูปกลับมา เว็บเอาลิงก์นั้นไปทำ QR
 
 โค้ดฝั่ง Apps Script อยู่ที่ `apps-script/Code.gs` วิธีอัปเดต:
 1. เปิดโปรเจกต์ Apps Script เดิม (script.google.com) แล้ววางโค้ดจาก `Code.gs` แทนของเดิม กด Save
