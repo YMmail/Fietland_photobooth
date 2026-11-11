@@ -22,8 +22,8 @@ Photobooth แบบเกาหลี (9:16) ทำงานเป็น 4 ข�
 **กรอบจากไฟล์รูป** เป็น PNG 1080x1920 ที่เจาะช่องรูปให้โปร่งใส แล้วบอกพิกัดช่อง (พิกเซลบนไฟล์กรอบ) ใน `slots`
 เรียงตามลำดับช็อต สัดส่วนของช่องจะเป็นสัดส่วนกล้องตอนถ่าย
 ```js
-{ name: 'Unlock Multiskills', cuts: 4, color: '#0d0b2e',
-  src: 'frames/unlock-multiskills.png',
+{ name: 'Game Frame', cuts: 4, color: '#0d0b2e',
+  src: 'Game_frames.png',
   slots: [ { x: 92, y: 127, w: 397, h: 643 }, /* ... */ ] },
 ```
 

@@ -34,14 +34,32 @@ const FRAMES = [
     plainFrame('Lavender', '#dbc7eb', 3),
     plainFrame('Pink', '#f6cfdc', 3),
     plainFrame('Butter', '#f7eeca', 3),
+    {
+        name: 'Cloud Frame', cuts: 3, color: '#bfe3f7',
+        src: 'frames/cloud-frame.png',
+        slots: [
+            { x: 135, y: 86, w: 797, h: 482 },
+            { x: 135, y: 631, w: 797, h: 482 },
+            { x: 131, y: 1176, w: 797, h: 512 },
+        ],
+    },
+    {
+        name: 'Window Frame', cuts: 3, color: '#d0d0d0',
+        src: 'frames/window-frame.png',
+        slots: [
+            { x: 156, y: 261, w: 712, h: 441 },
+            { x: 156, y: 722, w: 713, h: 442 },
+            { x: 156, y: 1179, w: 713, h: 446 },
+        ],
+    },
 
     plainFrame('Classic White', '#ffffff', 4),
     plainFrame('Lavender', '#dbc7eb', 4),
     plainFrame('Pink', '#f6cfdc', 4),
     plainFrame('Butter', '#f7eeca', 4),
     {
-        name: 'Unlock Multiskills', cuts: 4, color: '#0d0b2e',
-        src: 'frames/unlock-multiskills.png',
+        name: 'Game Frame', cuts: 4, color: '#0d0b2e',
+        src: 'Game_frames.png',
         slots: [
             { x: 92, y: 127, w: 397, h: 643 },
             { x: 591, y: 127, w: 397, h: 643 },
